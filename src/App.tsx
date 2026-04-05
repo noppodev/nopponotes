@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -69,6 +70,37 @@ export default function App() {
       }
     };
     check();
+  }, []);
+
+  // ネイティブでアプリ起動中にカスタムスキームで開かれたときの処理
+  useEffect(() => {
+    let handler: any = null;
+    try {
+      handler = CapacitorApp.addListener('appUrlOpen', (event: any) => {
+        try {
+          const url = new URL(event.url);
+          const token = url.searchParams.get('token') || url.searchParams.get('ticket');
+          if (token) {
+            (async () => {
+              const authUser = await authService.handleIncomingToken(token);
+              if (authUser) {
+                setUser(authUser);
+                setCurrentView('notes');
+              }
+            })();
+          }
+        } catch (e) {
+          console.error('appUrlOpen URL parse error:', e);
+        }
+      });
+    } catch (e) {
+      // Capacitor App プラグインが無い／ブラウザ環境など
+      // console.warn('Capacitor App listener not available', e);
+    }
+
+    return () => {
+      if (handler && typeof handler.remove === 'function') handler.remove();
+    };
   }, []);
 
   // ページ遷移時にトップへスクロール

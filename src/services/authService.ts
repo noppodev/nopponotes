@@ -68,5 +68,36 @@ export const authService = {
       }
     }
     return this.getUser();
+  },
+
+  async handleIncomingToken(token: string): Promise<User | null> {
+    if (!token) return null;
+    try {
+      const res = await fetch(`${AUTH_URL}/auth/v1/user?ticket=${encodeURIComponent(token)}`, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (res.ok) {
+        const user = await res.json();
+        const userData = {
+          userId: user.userId,
+          avatar: user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`,
+          email: user.email
+        };
+
+        // トークン/ユーザ情報をアプリ側の localStorage に格納
+        localStorage.setItem('noppo_user', JSON.stringify(userData));
+        localStorage.setItem('noppo_token', token);
+
+        return userData;
+      }
+    } catch (e) {
+      console.error('handleIncomingToken エラー:', e);
+    }
+    return null;
   }
 };
