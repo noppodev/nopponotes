@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NoppoNotes</string>
+    <string name="title_activity_main">NoppoNotes</string>
+    <string name="package_name">com.noppostudio.notes</string>
+    <string name="custom_url_scheme">com.noppostudio.notes</string>
+</resources>
