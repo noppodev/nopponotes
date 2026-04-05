@@ -1,17 +1,24 @@
 import { User } from '../types';
+import { Capacitor } from '@capacitor/core';
 
 const AUTH_URL = "https://noppo-auth.noppo5319.workers.dev";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2YXZhc3JkeGd1cWtpaWdjeGtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MTk5ODcsImV4cCI6MjA4Mjk5NTk4N30.CVq3lyRbxek7Ejs4tP5sN9-0JNEXSLtCsC2Pj-skFFQ";
 
+const APP_SCHEME = 'nopponotes';
+const REDIRECT_PATH = 'auth';
+
 export const authService = {
   login() {
-    const currentUrl = encodeURIComponent(window.location.href);
-    window.location.href = `${AUTH_URL}?redirect=${currentUrl}`;
+    const isNative = Capacitor.getPlatform && Capacitor.getPlatform() !== 'web';
+    const redirectUri = isNative ? `${APP_SCHEME}://${REDIRECT_PATH}` : window.location.href;
+    const encoded = encodeURIComponent(redirectUri);
+    window.location.href = `${AUTH_URL}?redirect=${encoded}`;
   },
 
   logout() {
     localStorage.removeItem('noppo_user');
-    const homeUrl = encodeURIComponent(window.location.origin);
+    const isNative = Capacitor.getPlatform && Capacitor.getPlatform() !== 'web';
+    const homeUrl = encodeURIComponent(isNative ? `${APP_SCHEME}://${REDIRECT_PATH}` : window.location.origin);
     window.location.href = `${AUTH_URL}/logout?redirect=${homeUrl}`;
   },
 
@@ -21,8 +28,14 @@ export const authService = {
   },
 
   async checkAuth(): Promise<User | null> {
-    const urlParams = new URLSearchParams(window.location.search);
-    const ticket = urlParams.get('ticket');
+    // モバイルのカスタムスキームにも対応するため、window.location.href 全体をパースする
+    let ticket: string | null = null;
+    try {
+      const url = new URL(window.location.href);
+      ticket = url.searchParams.get('ticket');
+    } catch (e) {
+      console.error('URL解析エラー:', e);
+    }
 
     if (ticket) {
       try {
@@ -41,13 +54,13 @@ export const authService = {
             avatar: user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`,
             email: user.email
           };
-          
+
           localStorage.setItem('noppo_user', JSON.stringify(userData));
-          
+
           // URLからチケットを消して見た目を綺麗にする
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
-          
+
           return userData;
         }
       } catch (e) {
